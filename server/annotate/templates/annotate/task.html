@@ -90,8 +90,14 @@ ctx.strokeStyle = '#a0f';
 var boxes = {{ boxes }};
 
 var img = new Image();
+var img_loaded = false;
 var scale = 0;
-img.onload = redraw;
+img.onload = function() {
+    img_loaded = img.height != 0 && img.width != 0;
+    scale = canvas.width / img.width;
+    scale = Math.min(scale, canvas.height / img.height);
+    redraw();
+};
 img.src = "../getimage/{{ task.id }}";
 
 document.getElementById('prop_photo_0').checked = {{ task.prop_photo }} == 0;
@@ -105,10 +111,8 @@ document.getElementById('prop_st_1').checked = {{ task.prop_st }};
 
 function redraw() {
     console.log('redraw');
-    if (img.height == 0 || img.width == 0)
+    if (!img_loaded)
         return;
-    scale = canvas.width / img.width;
-    scale = Math.min(scale, canvas.height / img.height);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, img.width * scale, img.height * scale);
     {% if not writable %}
@@ -142,6 +146,8 @@ function redraw() {
 }
 
 function save(next_location) {
+    if (!img_loaded)
+        return;
     if (!document.getElementById('prop_photo_0').checked && !document.getElementById('prop_photo_1').checked)
         return;
     if (!document.getElementById('prop_occluded_0').checked && !document.getElementById('prop_occluded_1').checked)
@@ -167,6 +173,8 @@ function save(next_location) {
 }
 
 function undo() {
+    if (!img_loaded)
+        return;
     if (boxes.length >= 1 && boxes[boxes.length - 1].length == 0) {
         boxes.pop();
     } else if (boxes.length >= 1) {
@@ -176,11 +184,15 @@ function undo() {
 }
 
 function new_box() {
+    if (!img_loaded)
+        return;
     if (boxes.length == 0 || boxes[boxes.length - 1].length >= 2)
         boxes.push([]);
 }
 
 $(canvas).on("click", function (event) {
+    if (!img_loaded)
+        return;
     var x = event.offsetX / scale;
     var y = event.offsetY / scale;
     if (boxes.length == 0 || boxes[boxes.length - 1].length == 4)
@@ -193,6 +205,8 @@ $(window).on("keydown", function (event) {
     if (event.target.matches('#input-token')) {
         return;
     }
+    if (!img_loaded)
+        return;
 	var key = event.key.toUpperCase();
     if (key == 'ARROWLEFT' || key == 'LEFT') {
         save('{{ previous }}');
