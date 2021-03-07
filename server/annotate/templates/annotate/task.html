@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-B0vP5xmATw1+K9KRQjQERJvTumQW0nPEzvF6L/Z6nronJ3oUOFUFpCjEUQouq2+l" crossorigin="anonymous">
+        <script src="https://unpkg.com/jquery@3.6.0/dist/jquery.min.js"></script>
+    </head>
+    <body>
+        <h1>Task {{ task.id }}</h1>
+        <canvas id="canvas" style="position: absolute; top: 0; left: 0; cursor: crosshair;"></canvas>
+        <div style="position: absolute; top: 0; right: 0; width: 150px; height: 100%; background-color: #ddd;">
+            <div>
+                Token:<br>
+                <input type="text" id="input-token" style="width: 90%;" value="{{ token.secret }}"><br>
+                <button id="button-login">登录</button><br>
+                当前可标注范围：<br>
+                {{ token.task_id_start }} - {{ token.task_id_end }}
+            </div>
+            <hr>
+            <div>
+                <button class="btn btn-success" id="button-save">下一张(S)</button>
+            </div>
+            <div>
+                <button class="btn btn-warning" id="button-previous">上一张(←)</button>
+            </div>
+            <hr>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="prop_photo" id="prop_photo_0">
+                <label class="form-check-label" for="prop_photo_0">非照片</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="prop_photo" id="prop_photo_1">
+                <label class="form-check-label" for="prop_photo_1">是照片</label>
+            </div>
+            <hr>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="prop_occluded" id="prop_occluded_0">
+                <label class="form-check-label" for="prop_occluded_0">无遮挡</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="prop_occluded" id="prop_occluded_1">
+                <label class="form-check-label" for="prop_occluded_1">有遮挡</label>
+            </div>
+            <hr>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="prop_art" id="prop_art_0">
+                <label class="form-check-label" for="prop_art_0">纯色</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="prop_art" id="prop_art_1">
+                <label class="form-check-label" for="prop_art_1">艺术/彩色</label>
+            </div>
+            <hr>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="prop_st" id="prop_st_0">
+                <label class="form-check-label" for="prop_st_0">正常标注</label>
+            </div>
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="prop_st" id="prop_st_1">
+                <label class="form-check-label" for="prop_st_1">未全部标注</label>
+            </div>
+            <hr>
+            <div>
+                <button class="btn btn-danger" id="button-undo">撤销(Z)</button>
+            </div>
+            <div>
+                <button class="btn btn-success" id="button-new-box">标下一个框(V)</button>
+                若只标了2个或3个点，需要手动开始标下一个框
+            </div>
+            <hr>
+            <div>
+                {{ task.id }}<br>({{ task.idname }})
+            </div>
+            <div>
+                <button class="btn btn-danger" id="button-refresh">刷新不保存(F5)</button>
+            </div>
+        </div>
+        <script>
+'use strict';
+
+console.log("{{ task.idname }}");
+
+const canvas = document.getElementById('canvas');
+canvas.width = document.documentElement.clientWidth - 150;
+canvas.height = document.documentElement.clientHeight;
+
+const ctx = canvas.getContext("2d");
+ctx.lineWidth = '2';
+ctx.strokeStyle = '#a0f';
+
+var boxes = {{ boxes }};
+
+var img = new Image();
+var scale = 0;
+img.onload = redraw;
+img.src = "../getimage/{{ task.id }}";
+
+document.getElementById('prop_photo_0').checked = {{ task.prop_photo }} == 0;
+document.getElementById('prop_photo_1').checked = {{ task.prop_photo }};
+document.getElementById('prop_occluded_0').checked = {{ task.prop_occluded }} == 0;
+document.getElementById('prop_occluded_1').checked = {{ task.prop_occluded }};
+document.getElementById('prop_art_0').checked = {{ task.prop_art }} == 0;
+document.getElementById('prop_art_1').checked = {{ task.prop_art }};
+document.getElementById('prop_st_0').checked = {{ task.prop_st }} == 0;
+document.getElementById('prop_st_1').checked = {{ task.prop_st }};
+
+function redraw() {
+    console.log('redraw');
+    if (img.height == 0 || img.width == 0)
+        return;
+    scale = canvas.width / img.width;
+    scale = Math.min(scale, canvas.height / img.height);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, img.width * scale, img.height * scale);
+    {% if not writable %}
+    ctx.font = "40px Arial";
+    ctx.fillStyle = "red";
+    ctx.fillText("无权修改，所有操作都不会保存！！请输入有效 Token 并登录", 50, 100);
+    {% endif %}
+    for (var i = 0; i < boxes.length; i++) {
+        var box = boxes[i];
+        ctx.beginPath();
+        if (box.length == 2) {
+            ctx.rect(box[0][0] * scale, box[0][1] * scale, (box[1][0] - box[0][0]) * scale, (box[1][1] - box[0][1]) * scale);
+        } else if (box.length == 1) {
+            ctx.arc(box[0][0] * scale, box[0][1] * scale, 4, 0, 2 * Math.PI);
+        } else if (box.length == 3) {
+            ctx.moveTo(box[0][0] * scale, box[0][1] * scale);
+            for (var j = 1; j < box.length; j++) {
+                ctx.lineTo(box[j][0] * scale, box[j][1] * scale);
+            }
+            ctx.lineTo((box[0][0] - box[1][0] + box[2][0]) * scale, (box[0][1] - box[1][1] + box[2][1]) * scale);
+            ctx.closePath();
+        } else if (box.length >= 4) {
+            ctx.moveTo(box[0][0] * scale, box[0][1] * scale);
+            for (var j = 1; j < box.length; j++) {
+                ctx.lineTo(box[j][0] * scale, box[j][1] * scale);
+            }
+            ctx.closePath();
+        }
+        ctx.stroke();
+    }
+}
+
+function save(next_location) {
+    if (!document.getElementById('prop_photo_0').checked && !document.getElementById('prop_photo_1').checked)
+        return;
+    if (!document.getElementById('prop_occluded_0').checked && !document.getElementById('prop_occluded_1').checked)
+        return;
+    if (!document.getElementById('prop_art_0').checked && !document.getElementById('prop_art_1').checked)
+        return;
+    if (!document.getElementById('prop_st_0').checked && !document.getElementById('prop_st_1').checked)
+        return;
+    var submitted = {
+        'boxes': JSON.stringify(boxes),
+        'prop_photo': document.getElementById('prop_photo_1').checked | 0,
+        'prop_occluded': document.getElementById('prop_occluded_1').checked | 0,
+        'prop_art': document.getElementById('prop_art_1').checked | 0,
+        'prop_st': document.getElementById('prop_st_1').checked | 0,
+        'clientWidth': document.documentElement.clientWidth,
+        'clientHeight': document.documentElement.clientHeight,
+        'csrfmiddlewaretoken': '{{ csrf_token }}',
+    };
+    $.post(window.location, submitted, function(next_unlabeled) {
+        window.location = next_location;
+    });
+    console.log(submitted);
+}
+
+function undo() {
+    if (boxes.length >= 1 && boxes[boxes.length - 1].length == 0) {
+        boxes.pop();
+    } else if (boxes.length >= 1) {
+        boxes[boxes.length - 1].pop();
+    }
+    redraw();
+}
+
+function new_box() {
+    if (boxes.length == 0 || boxes[boxes.length - 1].length >= 2)
+        boxes.push([]);
+}
+
+$(canvas).on("click", function (event) {
+    var x = event.offsetX / scale;
+    var y = event.offsetY / scale;
+    if (boxes.length == 0 || boxes[boxes.length - 1].length == 4)
+        boxes.push([]);
+    boxes[boxes.length - 1].push([x, y]);
+    redraw();
+});
+
+$(window).on("keydown", function (event) {
+    if (event.target.matches('#input-token')) {
+        return;
+    }
+	var key = event.key.toUpperCase();
+    if (key == 'ARROWLEFT' || key == 'LEFT') {
+        save('{{ previous }}');
+    } else if (key == 'ARROWRIGHT' || key == 'RIGHT') {
+        save('{{ next }}');
+    } else if (key == 'S') {
+        save('{{ next }}');
+    } else if (key == 'Z') {
+        undo();
+	} else if (key == 'V') {
+        new_box();
+    }
+});
+
+$('#button-login').click(function() {
+    var data = {
+        token: document.getElementById('input-token').value,
+        csrfmiddlewaretoken: '{{ csrf_token }}',
+    };
+    $.post('{% url "annotate:tokenlogin" %}', data, function() {
+        window.location.reload();
+    });
+});
+
+$('#button-save').click(function() {
+    save('{{ next }}');
+});
+
+$('#button-undo').click(undo);
+
+$('#button-new-box').click(new_box);
+
+$('#button-refresh').click(function() {
+    window.location.reload();
+});
+
+$('#button-previous').click(function() {
+    save('{{ previous }}');
+});
+
+        </script>
+    </body>
+</html>
