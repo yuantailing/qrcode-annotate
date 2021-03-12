@@ -9,4 +9,4 @@ def run(*args):
     with open(os.path.join(webimgs_root_dir, '../detectresult.json')) as f:
         results = json.load(f)
     for idname, points in results.items():
-        task = Task.objects.filter(idname=idname).update(boxes=json.dumps([points]))
+        Task.objects.filter(id__gt=7000, idname=idname).update(boxes=json.dumps([points]))

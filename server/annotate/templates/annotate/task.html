@@ -5,7 +5,7 @@
         <script src="https://unpkg.com/jquery@3.6.0/dist/jquery.min.js"></script>
     </head>
     <body>
-        <h1>Task {{ task.id }}</h1>
+        <h1>Task {{ task.id }} <span id="span-loading">未加载</span></h1>
         <canvas id="canvas" style="position: absolute; top: 0; left: 0; cursor: crosshair;"></canvas>
         <div style="position: absolute; top: 0; right: 0; width: 150px; height: 100%; background-color: #ddd;">
             <div>
@@ -23,31 +23,33 @@
                 <button class="btn btn-warning" id="button-previous">上一张(←)</button>
             </div>
             <hr>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="prop_photo" id="prop_photo_0">
-                <label class="form-check-label" for="prop_photo_0">非照片</label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="prop_photo" id="prop_photo_1">
-                <label class="form-check-label" for="prop_photo_1">是照片</label>
-            </div>
-            <hr>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="prop_occluded" id="prop_occluded_0">
-                <label class="form-check-label" for="prop_occluded_0">无遮挡</label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="prop_occluded" id="prop_occluded_1">
-                <label class="form-check-label" for="prop_occluded_1">有遮挡</label>
-            </div>
-            <hr>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="prop_art" id="prop_art_0">
-                <label class="form-check-label" for="prop_art_0">纯色</label>
-            </div>
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="prop_art" id="prop_art_1">
-                <label class="form-check-label" for="prop_art_1">艺术/彩色</label>
+            <div hidden>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="prop_photo" id="prop_photo_0">
+                    <label class="form-check-label" for="prop_photo_0">非照片(Q)</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="prop_photo" id="prop_photo_1">
+                    <label class="form-check-label" for="prop_photo_1">是照片(q)</label>
+                </div>
+                <br>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="prop_occluded" id="prop_occluded_0">
+                    <label class="form-check-label" for="prop_occluded_0">无遮挡(W)</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="prop_occluded" id="prop_occluded_1">
+                    <label class="form-check-label" for="prop_occluded_1">有遮挡(w)</label>
+                </div>
+                <br>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="prop_art" id="prop_art_0">
+                    <label class="form-check-label" for="prop_art_0">纯色(E)</label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="prop_art" id="prop_art_1">
+                    <label class="form-check-label" for="prop_art_1">艺术/彩色(e)</label>
+                </div>
             </div>
             <hr>
             <div class="form-check">
@@ -77,8 +79,6 @@
         <script>
 'use strict';
 
-console.log("{{ task.idname }}");
-
 const canvas = document.getElementById('canvas');
 canvas.width = document.documentElement.clientWidth - 150;
 canvas.height = document.documentElement.clientHeight;
@@ -96,6 +96,7 @@ img.onload = function() {
     img_loaded = img.height != 0 && img.width != 0;
     scale = canvas.width / img.width;
     scale = Math.min(scale, canvas.height / img.height);
+    $('#span-loading').text("已加载");
     redraw();
 };
 img.src = "../getimage/{{ task.id }}";
@@ -146,8 +147,10 @@ function redraw() {
 }
 
 function save(next_location) {
-    if (!img_loaded)
+    if (!img_loaded) {
+        window.location = next_location;
         return;
+    }
     if (!document.getElementById('prop_photo_0').checked && !document.getElementById('prop_photo_1').checked)
         return;
     if (!document.getElementById('prop_occluded_0').checked && !document.getElementById('prop_occluded_1').checked)
@@ -166,7 +169,7 @@ function save(next_location) {
         'clientHeight': document.documentElement.clientHeight,
         'csrfmiddlewaretoken': '{{ csrf_token }}',
     };
-    $.post(window.location, submitted, function(next_unlabeled) {
+    $.post(window.location, submitted, function(data) {
         window.location = next_location;
     });
     console.log(submitted);
@@ -205,9 +208,7 @@ $(window).on("keydown", function (event) {
     if (event.target.matches('#input-token')) {
         return;
     }
-    if (!img_loaded)
-        return;
-	var key = event.key.toUpperCase();
+    var key = event.key.toUpperCase();
     if (key == 'ARROWLEFT' || key == 'LEFT') {
         save('{{ previous }}');
     } else if (key == 'ARROWRIGHT' || key == 'RIGHT') {
@@ -218,6 +219,15 @@ $(window).on("keydown", function (event) {
         undo();
 	} else if (key == 'V') {
         new_box();
+    } else if (key == 'Q') {
+        document.getElementById('prop_photo_0').checked = event.key == event.key.toUpperCase();
+        document.getElementById('prop_photo_1').checked = event.key == event.key.toLowerCase();
+    } else if (key == 'W') {
+        document.getElementById('prop_occluded_0').checked = event.key == event.key.toUpperCase();
+        document.getElementById('prop_occluded_1').checked = event.key == event.key.toLowerCase();
+    } else if (key == 'E') {
+        document.getElementById('prop_art_0').checked = event.key == event.key.toUpperCase();
+        document.getElementById('prop_art_1').checked = event.key == event.key.toLowerCase();
     }
 });
 

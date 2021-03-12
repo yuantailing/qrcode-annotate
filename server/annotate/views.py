@@ -32,8 +32,7 @@ def task(request, id):
         with transaction.atomic():
             Log.objects.create(task=task, post_body=request.body)
             task.save()
-        next_task = Task.objects.filter(finished=False).first()
-        return HttpResponse(reverse('annotate:task', args=[next_task.id]))
+        return HttpResponse('ok')
     return render(request, 'annotate/task.html', {'task': task, 'token': token, 'writable': writable, 'boxes': task.boxes or [], 'previous': reverse('annotate:task', args=[task.id - 1]), 'next': reverse('annotate:task', args=[task.id + 1])})
 
 def getimage(request, id):
