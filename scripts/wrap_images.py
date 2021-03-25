@@ -28,7 +28,7 @@ def regular_box(points, idname):
 with open('boxes.json') as f:
     all_boxes = json.load(f)
 for idname in all_boxes.keys():
-    all_boxes[idname] = [regular_box(box, idname) for box in all_boxes[idname] if len(box) >= 2 and all(p[0] is not None and p[1] is not None for p in box)]
+    all_boxes[idname] = [regular_box(box, idname) for box in all_boxes[idname]['boxes'] if len(box) >= 2 and all(p[0] is not None and p[1] is not None for p in box)]
 all_boxes = {k: v for k, v in all_boxes.items() if len(v) >= 1}
 
 # 相同图片
@@ -72,8 +72,10 @@ def get_filepath(idname):
 def load_cv_image(idname):
     filepath = get_filepath(idname)
     pil_img = PIL.Image.open(filepath)
-    pil_img = pil_img.convert('RGB')
-    img = np.array(pil_img, dtype=np.uint8)[:, :, ::-1].copy()
+    pil_img = pil_img.convert('RGBA')
+    background = PIL.Image.new('RGB', size=pil_img.size, color=(255,255,255))
+    background.paste(pil_img, mask=pil_img)
+    img = np.array(background, dtype=np.uint8)[:, :, ::-1].copy()
     return img
 
 if not os.path.isdir(dst_root):
@@ -90,8 +92,8 @@ for idname, boxes in sorted(all_boxes.items()):
         pts1 = np.float32(box)
         M = cv2.getPerspectiveTransform(pts1, pts2)
         wrapped = cv2.warpPerspective(img, M, (2 * border + length, 2 * border + length), borderValue=[255, 255, 255])
-        cv2.imwrite(os.path.join(dst_root, idname.replace('/', '+') + f'-{i}-o-0.png'), wrapped, [cv2.IMWRITE_PNG_COMPRESSION, 6])
-        cv2.imwrite(os.path.join(dst_root, idname.replace('/', '+') + f'-{i}-r-0.png'), 255 - wrapped, [cv2.IMWRITE_PNG_COMPRESSION, 6])
+        cv2.imwrite(os.path.join(dst_root, idname.replace('/', '+') + f'-{i}-o-0.png'), wrapped, [cv2.IMWRITE_PNG_COMPRESSION, 3])
+        cv2.imwrite(os.path.join(dst_root, idname.replace('/', '+') + f'-{i}-r-0.png'), (255 - wrapped), [cv2.IMWRITE_PNG_COMPRESSION, 3])
 
 for search_engine in os.listdir(webimgs_root):
     src_dir = os.path.join(webimgs_root, search_engine)
@@ -99,5 +101,5 @@ for search_engine in os.listdir(webimgs_root):
         id = int(os.path.splitext(filename)[0])
         idname = f'{search_engine}/{id}'
         img = load_cv_image(idname)
-        cv2.imwrite(os.path.join(nowrap_root, idname.replace('/', '+') + '-orig.png'), img, [cv2.IMWRITE_PNG_COMPRESSION, 6])
-        cv2.imwrite(os.path.join(nowrap_root, idname.replace('/', '+') + '-reverse.png'), 255 - img, [cv2.IMWRITE_PNG_COMPRESSION, 6])
+        cv2.imwrite(os.path.join(nowrap_root, idname.replace('/', '+') + '-orig.png'), img, [cv2.IMWRITE_PNG_COMPRESSION, 3])
+        cv2.imwrite(os.path.join(nowrap_root, idname.replace('/', '+') + '-reverse.png'), (255 - img), [cv2.IMWRITE_PNG_COMPRESSION, 3])
