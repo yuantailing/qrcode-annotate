@@ -131,3 +131,15 @@ dmypy.json
 *.sqlite3
 /server/server/settings.py
 /webimgs/
+/scripts/notwrapped/
+/scripts/notwrapped-mirror/
+/scripts/wrapped/
+/scripts/wrapped-mirror/
+/scripts/pyboof/
+
+/scripts/clusters.json
+/scripts/same.json
+/scripts/boxes.json
+/scripts/zxing_direct_decode.txt
+/scripts/*_detect_*.txt
+/scripts/bs_regular_*.txt
