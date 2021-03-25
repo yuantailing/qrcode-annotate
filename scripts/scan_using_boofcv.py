@@ -1,16 +1,14 @@
 import os
 import numpy as np
 import pyboof as pb
-
+import sys
 
 detector = pb.FactoryFiducial(np.uint8).qrcode()
 
-root_nowrap = '../notwrapped'
-root_wrap = '../wrapped'
+img_dir = sys.argv[1]
 
-
-for filename in os.listdir(root_wrap):
-    image = pb.load_single_band(os.path.join(root_wrap, filename), np.uint8)
+for filename in os.listdir(img_dir):
+    image = pb.load_single_band(os.path.join(img_dir, filename), np.uint8)
     detector.detect(image)
     for detection in detector.detections:
         print(filename, 'success', detection.verson, detection.error_level, end=' ')

@@ -5,8 +5,8 @@ import numpy as np
 import PIL.Image
 
 webimgs_root = '../webimgs'
-dst_root = 'wrapped'
-nowrap_root = 'notwrapped'
+dst_root = 'wrapped-mirror'
+nowrap_root = 'notwrapped-mirror'
 
 def regular_box(points, idname):
     if len(points) == 2:
@@ -92,8 +92,8 @@ for idname, boxes in sorted(all_boxes.items()):
         pts1 = np.float32(box)
         M = cv2.getPerspectiveTransform(pts1, pts2)
         wrapped = cv2.warpPerspective(img, M, (2 * border + length, 2 * border + length), borderValue=[255, 255, 255])
-        cv2.imwrite(os.path.join(dst_root, idname.replace('/', '+') + f'-{i}-o-0.png'), wrapped, [cv2.IMWRITE_PNG_COMPRESSION, 3])
-        cv2.imwrite(os.path.join(dst_root, idname.replace('/', '+') + f'-{i}-r-0.png'), (255 - wrapped), [cv2.IMWRITE_PNG_COMPRESSION, 3])
+        cv2.imwrite(os.path.join(dst_root, idname.replace('/', '+') + f'-{i}-o-0.png'), wrapped[:,::-1], [cv2.IMWRITE_PNG_COMPRESSION, 3])
+        cv2.imwrite(os.path.join(dst_root, idname.replace('/', '+') + f'-{i}-r-0.png'), (255 - wrapped)[:,::-1], [cv2.IMWRITE_PNG_COMPRESSION, 3])
 
 for search_engine in os.listdir(webimgs_root):
     src_dir = os.path.join(webimgs_root, search_engine)
@@ -101,5 +101,5 @@ for search_engine in os.listdir(webimgs_root):
         id = int(os.path.splitext(filename)[0])
         idname = f'{search_engine}/{id}'
         img = load_cv_image(idname)
-        cv2.imwrite(os.path.join(nowrap_root, idname.replace('/', '+') + '-orig.png'), img, [cv2.IMWRITE_PNG_COMPRESSION, 3])
-        cv2.imwrite(os.path.join(nowrap_root, idname.replace('/', '+') + '-reverse.png'), (255 - img), [cv2.IMWRITE_PNG_COMPRESSION, 3])
+        cv2.imwrite(os.path.join(nowrap_root, idname.replace('/', '+') + '-orig.png'), img[:,::-1], [cv2.IMWRITE_PNG_COMPRESSION, 3])
+        cv2.imwrite(os.path.join(nowrap_root, idname.replace('/', '+') + '-reverse.png'), (255 - img)[:,::-1], [cv2.IMWRITE_PNG_COMPRESSION, 3])
